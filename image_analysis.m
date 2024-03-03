@@ -42,40 +42,28 @@ time_s = (0:1:num_images-1)./(setup.FrameRate);
 
 %% Getting Single frame 
 
-frame = 45;
 
 
-demosaiced_image = demosaic(raw_image_array(:,:,frame), "gbrg");       % 12-bit image
-% R = double(demosaiced_image(:,:,1));
-
-% Y = 1:im_width;
-% X = 1:im_height;
-
-% [xx,yy]=meshgrid(Y,X);
-
-% figure 
-% hold on 
-% mesh(xx, yy, R)
-
-% analyze image row by row
-
-row_number = 20;
-start_pixel = 599;
-end_pixel = 1000;
+frame = 34;
+row_number = 90;
+start_pixel = 1;
+end_pixel = 1280;
 row = double(raw_image_array(row_number, :, frame));
 row = row(start_pixel:end_pixel);
 % 1-1280 
 pixels = start_pixel:end_pixel;
 
-
 odd_pixels = find(mod(pixels, 2) == 1);
 even_pixels = find(mod(pixels,2) == 0);
-row = row(even_pixels);
+pixel_type = pixels;
 
-pixel_type = even_pixels;
+row = row(pixel_type);
+
 
 row_fit = polyfit(pixel_type, row, 25);
 row_fit = polyval(row_fit, pixel_type);
+
+[pk_y, pk_x] = findpeaks(row_fit, pixel_type , 'MinPeakHeight', 400);
 
 figure
 plot(pixel_type + start_pixel, row, 'o');
@@ -85,3 +73,29 @@ xlabel('Pixel');
 ylabel('Pixel Val');
 title('Value Curve');
 
+plot(pk_x+start_pixel, pk_y, 'ro');
+hold on
+
+
+%% Finding zone
+
+% the starting value is always the last element of pk_y
+%
+
+start_zone = [pk_x(length(pk_x)) + start_pixel, pk_y(length(pk_y))];
+display(start_zone(1));
+display(start_zone(2))
+
+% threshold is ~160
+end_zone = [start_zone(1), start_zone(2)];
+for x = start_zone(1):(end_pixel-1)
+    if (row_fit(x) <= 160)
+        break
+    end
+    end_zone(1) = x;
+    end_zone(2) = row_fit(x);
+end
+display(end_zone(1))
+display(end_zone(2))
+plot(end_zone(1),end_zone(2), 'ro')
+    
