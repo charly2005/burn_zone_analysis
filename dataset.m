@@ -113,3 +113,40 @@ end
 
 % display(good_rows(1:119));
 
+%% import csv
+filename = "flamefrontdata.csv";
+ds = importdata(filename);
+
+%% idk
+% each row is an instance
+% col 1 = frame, col 2 = row, col 3 = x1, col 4 = x2
+
+% image row #2
+% display(data(2, 1:4));
+
+% average flame front
+average_dist = 0;
+for row = 1:166
+    x1 = data(row, 3);
+    x2 = data(row, 4);
+    average_dist = average_dist + (x2 - x1);
+end
+
+average_dist = average_dist / 166;
+% display("Average flame front length in pixels: " + average_dist);
+
+% test = data(1, :);
+% display(test(1));
+
+%% pair data w image
+clc
+ds = cell(166, 1);
+for row = 1:166
+    x = data(row, :);
+    color_image = demosaic(raw_image_array(:,:,x(1)), bayer_pattern);
+    R = double(color_image(:,:,1));
+    intensity_line = R(x(2),:,1);
+    ds{row} = {x , intensity_line};
+end
+
+display(ds{1}{1});
