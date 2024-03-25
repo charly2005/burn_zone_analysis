@@ -150,3 +150,33 @@ for row = 1:166
 end
 
 display(ds{1}{1});
+
+
+%% split data
+% 80 20 split
+x_len = int8(0.8 * 166);
+y_len = 166 - x_len;
+
+x_train = cell(x_len, 1);
+x_val = cell(x_len, 1);
+y_train = cell(y_len, 1);
+y_val = cell(y_len, 1);
+
+% first shuffle ds
+shuffled_indices = randperm(166);
+ds = ds(shuffled_indices, :);
+
+for row = 1:x_len
+    x_train{row} = ds{row}{2};
+    x_val{row} = ds{row}{1};
+end
+
+for row = 1:y_len
+    y_train{row} = ds{row}{2};
+    y_val{row} = ds{row}{1};
+end
+
+%% model
+
+layers = [...
+    sequentialInputLayer([1,1280])]
