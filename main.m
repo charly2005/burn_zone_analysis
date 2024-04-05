@@ -37,10 +37,12 @@ num_images = size(raw_image_array, 3);
 % Time in seconds [s] t = (# of frames)/(Frames/Second) 
 time_s = (0:1:num_images-1)./(setup.FrameRate);
 
+% bayer pattern
+bayer_pattern = "gbrg";
+
 
 %% plot smoothed intensity line
 
-bayer_pattern = "gbrg";
 pxSize_um_px = 1.7;
 start_frame = 30;
 final_frame = 70;
@@ -52,10 +54,13 @@ end_pixel = 1280;
 pixels = start_pixel:end_pixel;
 pixels = pixels(:);
 
-frame = 50;
-img_row = 38;
+frame = 25;
+img_row = 732;
 
 color_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
+% viewable = uint8(double(color_image).*(255/4095).*5);  % 8-bit image;
+% imshow(viewable);
+% hold on
 R = double(color_image(:,:,1));
 intensity_line = R(img_row,:,1);
 % Smoothing becasue this data is very noisy
@@ -66,14 +71,17 @@ plot(pixels, smoothed_line, 'r');
 title(['Frame: ', frame, " Row: ", img_row]);
 hold on
 
+% plot(pixels, intensity_line, 'b');
+% hold on
+
 
 %% Find bad values
 
 bad_rows = [];
-good_rows = []
+good_rows = [];
 
-% replace 2 with raw_image_array
-for row=1:size(2, 1)
+
+for row=1:size(raw_image_array, 1)
     smoothed_intensity_line = smooth(R(row, :, 1));
 
     % copy over getIndices function bc I can't use tpp as of now
@@ -104,18 +112,23 @@ for row=1:size(2, 1)
     % 
 
     if isnan(max_intensity_idx) || isnan(min_intensity_idx)
-   
-        bad_rows = [bad_rows; row];
+        if mod(row, 3) == 0
+            bad_rows = [bad_rows; row];
+        end
     else
-        good_rows = [good_rows; row];
+        if mod(row, 9) == 0
+            good_rows = [good_rows; row];
+        end
     end
 end
 
-% display(good_rows(1:119));
+% display(good_rows(1:50));
+% display(bad_rows(1:30));
 
 %% import csv
 filename = "flamefrontdata.csv";
-ds = importdata(filename);
+data = importdata(filename);
+data = data.data;
 
 %% idk
 % each row is an instance
@@ -126,57 +139,46 @@ ds = importdata(filename);
 
 % average flame front
 average_dist = 0;
-for row = 1:166
+for row = 1:333
     x1 = data(row, 3);
     x2 = data(row, 4);
     average_dist = average_dist + (x2 - x1);
 end
 
 average_dist = average_dist / 166;
-% display("Average flame front length in pixels: " + average_dist);
+display("Average flame front length in pixels: " + average_dist);
 
 % test = data(1, :);
 % display(test(1));
 
 %% pair data w image
 clc
-ds = cell(166, 1);
-for row = 1:166
+ds = cell(463, 1);
+for row = 1:463
     x = data(row, :);
     color_image = demosaic(raw_image_array(:,:,x(1)), bayer_pattern);
     R = double(color_image(:,:,1));
     intensity_line = R(x(2),:,1);
-    ds{row} = {x , intensity_line};
+    % intensity_line = smooth(intensity_line);
+    % change size [1280, 1] back to [1, 1280]
+    % intensity_line = reshape(intensity_line, 1, []);
+    ds{row} = [x(3:4) , intensity_line];
 end
 
-display(ds{1}{1});
 
+writecell(ds, 'flamefrontds.csv');
+%% load keras model
+front_net = importNetworkFromTensorFlow("kerasLionfront.pb");
+back_net = importNetworkFromTensorFlow("kerasLionback.pb");
+%% test model
+front = predict(front_net, intensity_line);
+back = predict(back_net, intensity_line);
+display(front + " " + back); 
 
-%% split data
-% 80 20 split
-x_len = int8(0.8 * 166);
-y_len = 166 - x_len;
+front_y = interp1(pixels, smoothed_line, front, 'linear');
+back_y = interp1(pixels, smoothed_line, back, 'linear'); 
 
-x_train = cell(x_len, 1);
-x_val = cell(x_len, 1);
-y_train = cell(y_len, 1);
-y_val = cell(y_len, 1);
-
-% first shuffle ds
-shuffled_indices = randperm(166);
-ds = ds(shuffled_indices, :);
-
-for row = 1:x_len
-    x_train{row} = ds{row}{2};
-    x_val{row} = ds{row}{1};
-end
-
-for row = 1:y_len
-    y_train{row} = ds{row}{2};
-    y_val{row} = ds{row}{1};
-end
-
-%% model
-
-layers = [...
-    sequentialInputLayer([1,1280])]
+plot(front, front_y, 'bo');
+hold on
+plot(back, back_y, 'bo');
+hold on
