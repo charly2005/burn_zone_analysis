@@ -50,7 +50,6 @@ color_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
 gray = rgb2gray(color_image);
 binary = imbinarize(gray);
 imshow(binary);
-hold on
 % pixel value
 back = zeros(1, 800);
 
@@ -73,9 +72,9 @@ plot(pixels, smoothed_line, 'r');
 title(['Frame: ', frame, " Row: ", img_row]);
 hold on
 
-back_y = interp1(pixels, smoothed_line, back(img_row), 'linear');
+back_y = smoothed_line(back(img_row));
 
-plot(back_edge(img_row), back_y, 'bo');
+plot(back(img_row), back_y, 'bo');
 
 [peaks, x] = findpeaks(smoothed_line, pixels);
 
