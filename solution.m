@@ -86,7 +86,7 @@ plot(back(img_row), back_y, 'bo');
 
 % find closest 2 peaks (based off x value) to back(img_row)
 edge_front = x(1);
-edge_back = x(1);
+edge_back_estimate = x(1);
 for pk = 1:size(x)
     if (x(pk) >= back(img_row))
         start = pk;
@@ -100,18 +100,39 @@ end
 
 for pk = start:size(x)
     diff = x(pk) - back(img_row);
-    if (diff < abs(edge_back - back(img_row)))
-       edge_back = x(pk);
-   end
-end
-plot(edge_front, smoothed_line(edge_front), 'go');
-plot(edge_back, smoothed_line(edge_back), 'go');
-
-% edge_back almost there
-min_y = edge_back;
-for px = edge_back:1280
-    if (smoothed_line(px) < min_y)
-        min_y = smoothed_line(px);
+    if (diff < abs(edge_back_estimate - back(img_row)))
+       edge_back_estimate = x(pk);
     end
 end
-edge_y = 
+plot(edge_front, smoothed_line(edge_front), 'go');
+
+% for edge_back
+y_dist = back_y - smoothed_line(edge_back_estimate);
+% create a square and draw a diagonal through the middle to estimate
+% inflection point
+edge_back_lower = round(back(img_row) + y_dist);
+edge_back_y = (smoothed_line(edge_back_estimate) + smoothed_line(edge_back_lower)) / 2;
+
+% find edge_back with edge_back_y
+possible = [];
+last_idx = 0;
+% fix me
+for px = back:1280
+    if (abs(smoothed_line(px) - edge_back_y) <= 1)
+        possible = [possible, px]
+    end
+end
+
+%find closest to edge_back_estimate
+edge_back = 1280;
+for px = 1:size(possible)
+    dist = abs(edge_back_estimate - possible(px));
+    if (edge_back < dist)
+        edge_back = dist;
+    end
+end
+
+
+plot(edge_back_estimate, smoothed_line(edge_back_estimate), 'go');
+plot(edge_back_lower, smoothed_line(edge_back_lower), 'go');
+plot(edge_back, edge_back_y, 'go');
