@@ -43,13 +43,18 @@ bayer_pattern = "gbrg";
 
 %% find flame front for specific frame
 
-frame = 48;
-img_row = 23;
+frame = 20;
+img_row = 434;
 
 color_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
 gray = rgb2gray(color_image);
 binary = imbinarize(gray);
+figure
+imshow(color_image);
+hold on
 imshow(binary);
+hold on
+
 % pixel value
 back = zeros(1, 800);
 
