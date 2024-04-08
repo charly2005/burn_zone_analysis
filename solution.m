@@ -43,16 +43,17 @@ bayer_pattern = "gbrg";
 
 %% find flame front for specific frame
 
-frame = 20;
-img_row = 434;
+frame = 50;
+img_row = 545;
 
-color_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
+color_image = demosaic(raw_image_array(:,:,frame), "gbrg");
+% color_image = uint8(double(demosaiced_image).*(255/4095).*5); 
 gray = rgb2gray(color_image);
-binary = imbinarize(gray);
-figure
-imshow(color_image);
-hold on
-imshow(binary);
+binary = imbinarize(gray, 'global');
+
+imshow(gray);
+% hold on
+%imshow(color_image);
 hold on
 
 % pixel value
@@ -103,7 +104,14 @@ for pk = start:size(x)
        edge_back = x(pk);
    end
 end
+plot(edge_front, smoothed_line(edge_front), 'go');
+plot(edge_back, smoothed_line(edge_back), 'go');
 
-plot(edge_front, interp1(pixels, smoothed_line, edge_front, 'linear'), 'go');
-plot(edge_back, interp1(pixels, smoothed_line, edge_back, 'linear'), 'go');
-
+% edge_back almost there
+min_y = edge_back;
+for px = edge_back:1280
+    if (smoothed_line(px) < min_y)
+        min_y = smoothed_line(px);
+    end
+end
+edge_y = 
