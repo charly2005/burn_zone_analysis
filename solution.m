@@ -43,14 +43,15 @@ bayer_pattern = "gbrg";
 
 %% find flame front for specific frame
 
-frame = 42;
+frame = 41;
 img_row = 90;
 % doesnt work from frame 37 to 41 bc somehow can't demosaic the image?+
 color_image = demosaic(raw_image_array(:,:,frame), "gbrg");
-% color_image = uint8(double(demosaiced_image).*(255/4095).*5); 
 gray = rgb2gray(color_image);
-binary = imbinarize(gray, 'global');
 
+%have to binarize 
+binary = imbinarize(gray, graythresh(gray));
+imshow(gray);
 % pixel value
 back = zeros(1, 800);
 
@@ -102,10 +103,10 @@ end
 plot(edge_front, smoothed_line(edge_front), 'go');
 
 % for edge_back
-y_dist = back_y - smoothed_line(edge_back_estimate);
+y_dist = back_y - smoothed_line(edge_back_estimate)
 % create a square and draw a diagonal through the middle to estimate
 % inflection point
-edge_back_lower = round(back(img_row) + (y_dist/3) - (edge_back_estimate - back(img_row)));
+edge_back_lower = round(2*back(img_row) + (y_dist/3) - (edge_back_estimate));
 edge_back_y = (smoothed_line(edge_back_estimate) + smoothed_line(edge_back_lower)) / 2;
 
 % find edge_back with edge_back_y
