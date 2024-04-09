@@ -43,18 +43,13 @@ bayer_pattern = "gbrg";
 
 %% find flame front for specific frame
 
-frame = 50;
-img_row = 545;
-
+frame = 42;
+img_row = 90;
+% doesnt work from frame 37 to 41 bc somehow can't demosaic the image?+
 color_image = demosaic(raw_image_array(:,:,frame), "gbrg");
 % color_image = uint8(double(demosaiced_image).*(255/4095).*5); 
 gray = rgb2gray(color_image);
 binary = imbinarize(gray, 'global');
-
-imshow(gray);
-% hold on
-%imshow(color_image);
-hold on
 
 % pixel value
 back = zeros(1, 800);
@@ -110,29 +105,15 @@ plot(edge_front, smoothed_line(edge_front), 'go');
 y_dist = back_y - smoothed_line(edge_back_estimate);
 % create a square and draw a diagonal through the middle to estimate
 % inflection point
-edge_back_lower = round(back(img_row) + y_dist);
+edge_back_lower = round(back(img_row) + (y_dist/3) - (edge_back_estimate - back(img_row)));
 edge_back_y = (smoothed_line(edge_back_estimate) + smoothed_line(edge_back_lower)) / 2;
 
 % find edge_back with edge_back_y
-possible = [];
-last_idx = 0;
-% fix me
-for px = back:1280
-    if (abs(smoothed_line(px) - edge_back_y) <= 1)
-        possible = [possible, px]
-    end
-end
+smoothed_line_end = smoothed_line(back(img_row):1280);
+[z, edge_back] = min(abs(smoothed_line_end - round(edge_back_y)));
 
-%find closest to edge_back_estimate
-edge_back = 1280;
-for px = 1:size(possible)
-    dist = abs(edge_back_estimate - possible(px));
-    if (edge_back < dist)
-        edge_back = dist;
-    end
-end
+edge_back = back(img_row) + edge_back;
 
-
-plot(edge_back_estimate, smoothed_line(edge_back_estimate), 'go');
-plot(edge_back_lower, smoothed_line(edge_back_lower), 'go');
+% plot(edge_back_estimate, smoothed_line(edge_back_estimate), 'go');
+% plot(edge_back_lower, smoothed_line(edge_back_lower), 'go');
 plot(edge_back, edge_back_y, 'go');
