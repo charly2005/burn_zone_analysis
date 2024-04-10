@@ -43,15 +43,16 @@ bayer_pattern = "gbrg";
 
 %% find flame front for specific frame
 
-frame = 41;
-img_row = 90;
-% doesnt work from frame 37 to 41 bc somehow can't demosaic the image?+
+frame = 45;
+img_row = 420;
+% doesnt work from frame 37 to 41 bc somehow can't demosaic the image?
+% also frame 45 300-400 is weird
 color_image = demosaic(raw_image_array(:,:,frame), "gbrg");
 gray = rgb2gray(color_image);
 
 %have to binarize 
 binary = imbinarize(gray, graythresh(gray));
-imshow(gray);
+% imshow(gray);
 % pixel value
 back = zeros(1, 800);
 
@@ -115,6 +116,6 @@ smoothed_line_end = smoothed_line(back(img_row):1280);
 
 edge_back = back(img_row) + edge_back;
 
-% plot(edge_back_estimate, smoothed_line(edge_back_estimate), 'go');
-% plot(edge_back_lower, smoothed_line(edge_back_lower), 'go');
+plot(edge_back_estimate, smoothed_line(edge_back_estimate), 'g*');
+plot(edge_back_lower, smoothed_line(edge_back_lower), 'g*');
 plot(edge_back, edge_back_y, 'go');
