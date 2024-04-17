@@ -34,8 +34,9 @@ time_s = (0:1:num_images-1)./(setup.FrameRate);
 bayer_pattern = "gbrg";
 
 %% Calculate flame front data for specific frame/row
-frame = 45;
-img_row = 300;
+% start frame 20, end frame 60
+frame = 60;
+img_row = 100;
 
 [x1, y1, x2, y2] = calculate_front(frame, img_row, raw_image_array, bayer_pattern);
 
@@ -60,3 +61,49 @@ hold on
 
 plot(x1, y1,'bo');
 plot(x2, y2, 'bo');
+
+
+%% find highest value possible
+ymax = 0;
+for f = 1:84
+    for row = 1:800
+    demosaiced_image = demosaic(raw_image_array(:,:,f), "gbrg");
+    R = double(demosaiced_image(:,:,1));
+    intensity_line = R(img_row,:,1);
+        if (max(intensity_line) > ymax)
+            ymax = max(intensity_line);
+        end
+    end
+    disp(f);
+end
+
+%% Create gif for row
+
+start_pixel = 1;
+end_pixel = 1280;
+
+pixels = start_pixel:end_pixel;
+pixels = pixels(:);
+
+ 
+for f = 20:60
+    [x1, y1, x2, y2] = calculate_front(f, img_row, raw_image_array, bayer_pattern);
+    demosaiced_image = demosaic(raw_image_array(:,:,f), "gbrg");
+
+    R = double(demosaiced_image(:,:,1));
+    
+    intensity_line = R(img_row,:,1);
+    smoothed_line = smooth(intensity_line);
+    figure('Visible', 'off');
+    plot(pixels, smoothed_line, 'r');
+    ylim([0,3000]);
+    plot_title = "Frame: " + f + "   Row: " + img_row; 
+    title(plot_title);
+    hold on
+    plot(x1, y1,'bo');
+    plot(x2, y2, 'bo');
+    
+    exportgraphics(gcf, '100.gif', 'Append', true);
+
+end
+
