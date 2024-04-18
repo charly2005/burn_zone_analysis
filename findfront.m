@@ -77,7 +77,7 @@ for f = 1:84
     disp(f);
 end
 
-%% Create gif for row
+%% Create gif for specific row
 
 start_pixel = 1;
 end_pixel = 1280;
@@ -103,7 +103,67 @@ for f = 20:60
     plot(x1, y1,'bo');
     plot(x2, y2, 'bo');
     
-    exportgraphics(gcf, '100.gif', 'Append', true);
+    exportgraphics(gcf, '400.gif', 'Append', true);
 
 end
 
+%% Create video demo
+
+v = VideoWriter("flamefrontdemo.mp4", "MPEG-4");
+v.FrameRate = 5;
+v.Quality = 100;
+open(v)
+frames = (20:60);
+rows = [100, 400, 700];
+start_pixel = 1;
+end_pixel = 1280;
+
+pixels = start_pixel:end_pixel;
+pixels = pixels(:);
+
+fig = figure(1);
+
+for f = 20:60
+    demosaiced_image = demosaic(raw_image_array(:,:,f), bayer_pattern);
+    R = double(demosaiced_image(:,:,1));
+
+    gain = 5;
+    color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
+
+    clf 
+    subplot(3,2, [1,3,5]);
+    imshow(color_image);
+    hold on 
+    for row = 1:length(rows)
+        plot([1,im_width], [rows(row), rows(row)], 'b--', 'LineWidth',1);
+    end
+    plot_title = "Frame: " + f;
+    title(plot_title);
+       
+    num_plots = length(rows);
+
+    for i = 1:num_plots
+        [x1, y1, x2, y2] = calculate_front(f, rows(i), raw_image_array, bayer_pattern);
+        
+        intensity_line = R(rows(i),:,1);
+        smoothed_line = smooth(intensity_line); 
+
+
+        subplot(num_plots, 2, 2*i);
+        hold on
+        plot(pixels, smoothed_line, 'r');
+        ylim([0,3000]);
+        plot_title = "Frame: " + f + "   Row: " + rows(i); 
+        title(plot_title);
+        plot(x1, y1,'bo');
+        plot(x2, y2, 'bo');
+        xlabel('Distance [pixels]')
+        ylabel('Light Intensity [a.u.]')
+        
+    end
+
+    fig = getframe(figure(1));
+    writeVideo(v, fig);
+end
+
+close(v);
