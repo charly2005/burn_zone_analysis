@@ -1,4 +1,4 @@
-function [l, g] = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
+function [l, g, filtered_binary_image] = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
 
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
     binary_image = imbinarize(rgb2gray(demosaiced_image), 0.0039);
@@ -37,10 +37,12 @@ function [l, g] = calculate_length(frame, raw_image_array, bayer_pattern, scale_
     % 2 [654,799]	[655,799] [656,799]
     % 3 [654,800]	[655,800] [656,800]
 
-    disp(max_h)
-    disp(max_w)
+    disp(max_h);
+    disp(max_w);
+    revert_pos = [curr_x, curr_y];
+    last_pos = [curr_x, curr_y];
 
-    while true
+    while done == false
         % build grid
         for i = 1:3
             % 1 = down, 2 = mid, 3 = top
@@ -51,39 +53,63 @@ function [l, g] = calculate_length(frame, raw_image_array, bayer_pattern, scale_
                  x = curr_x + x_shift;
                  y = curr_y + y_shift;
                  g{i,j} = [x,y];
-                 disp(x)
-                 disp(y)
-                 if x >= max_w || y>= max_h || x <1
+                 if x >= max_w || y>= max_h || x < 1
                      done = true;
                  end
-                 % disp(g{i,j}(1));
             end
         end
 
         if done == true
             break;
         end
-
-        % implement traversing
+        disp(last_pos);
+        % dispf([g{1,3}(1),g{1,3}(2)]);
+        disp(g)
+        last_x = curr_x;
+        last_y = curr_y;
         % go clockwise starting right
-        last_pos = [curr_x, curr_y];
-
-        if filtered_binary_image(g{3,2}(1),g{3,2}(2)) == 1
-            % left
-            curr_x = curr_x - 1;
-        elseif filtered_binary_image(g{3,3}(1),g{3,3}(2)) == 1
-            curr_x = curr_x -1;
-            curr_y = curr_y + 1;
-        elseif filtered_binary_image(g{2,3}(1),g{2,3}(2)) == 1
-        elseif filtered_binary_image(g{1,3}(1),g{1,3}(2)) == 1
-        elseif filtered_binary_image(g{1,2}(1),g{1,2}(2)) == 1
-        elseif filtered_binary_image(g{1,1}(1),g{1,1}(1)) == 1
-        elseif filtered_binary_image(g{})
+        % if you go to {3,1} you may have to use revert_pos to avoid double
+        % counting
+        % TO IMPLEMENT LATER IF NEEDED: if you are are at revert_pos then start at top
+        if g{1,3}(2) ~= 0
+            if filtered_binary_image(g{1,3}(2),g{1,3}(1)) == 1 && not(g{1,3}(2) == last_pos(2) && g{1,3}(1) == last_pos(1))
+                curr_y = curr_y - 1;
+                curr_x = curr_x + 1;
+                revert_pos = [curr_x, curr_y];
+            elseif filtered_binary_image(g{2,3}(2),g{2,3}(1)) == 1 && not(g{2,3}(2) == last_pos(2) && g{2,3}(1) == last_pos(1))
+                curr_x = curr_x + 1;
+            elseif filtered_binary_image(g{3,3}(2),g{3,3}(1)) == 1 && not(g{3,3}(2) == last_pos(2) && g{3,3}(1) == last_pos(1))
+                curr_x = curr_x + 1;
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{3,2}(2),g{3,2}(1)) == 1 && not(g{3,2}(2) == last_pos(2) && g{3,2}(1) == last_pos(1))
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{3,1}(2),g{3,1}(1)) == 1 && not(g{3,1}(2) == last_pos(2) && g{3,1}(1) == last_pos(1))
+                curr_x = curr_x - 1;
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{2,1}(2),g{2,1}(1)) == 1 && not(g{2,1}(2) == last_pos(2) && g{2,1}(1) == last_pos(1))
+                curr_x = curr_x - 1;
+            elseif filtered_binary_image(g{1,1}(2),g{1,1}(1)) == 1 && not(g{1,1}(2) == last_pos(2) && g{1,1}(1) == last_pos(1))
+                curr_y = curr_y - 1;
+                curr_x = curr_x - 1;
+            elseif filtered_binary_image(g{1,2}(2),g{1,2}(1)) == 1 && not(g{1,2}(2) == last_pos(2) && g{1,2}(1) == last_pos(1))
+                curr_y = curr_y - 1;
+            end
+        else 
+            if filtered_binary_image(g{2,3}(2),g{2,3}(1)) == 1 && not(g{2,3}(2) == last_pos(2) && g{2,3}(1) == last_pos(1))
+                curr_x = curr_x + 1;
+            elseif filtered_binary_image(g{3,3}(2),g{3,3}(1)) == 1 && not(g{3,3}(2) == last_pos(2) && g{3,3}(1) == last_pos(1))
+                curr_x = curr_x + 1;
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{3,2}(2),g{3,2}(1)) == 1 && not(g{3,2}(2) == last_pos(2) && g{3,2}(1) == last_pos(1))
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{3,1}(2),g{3,1}(1)) == 1 && not(g{3,1}(2) == last_pos(2) && g{3,1}(1) == last_pos(1))
+                curr_x = curr_x - 1;
+                curr_y = curr_y + 1;
+            elseif filtered_binary_image(g{2,1}(2),g{2,1}(1)) == 1 && not(g{2,1}(2) == last_pos(2) && g{2,1}(1) == last_pos(1))
+                curr_x = curr_x - 1;
+            end
         end
-        curr_y = curr_y + 1;
-        % curr_x = curr_x + 1;
-        
-
+        last_pos = [last_x, last_y];
         l = l+1;
     end
 
