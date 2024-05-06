@@ -38,11 +38,17 @@ bayer_pattern = "gbrg";
 clc
 
 
-frame = 30;
-[l, s] = get_length(frame,raw_image_array,bayer_pattern);
+frame = 41;
 
+% smaller step = larger l
+step = 1;
+scale_factor = 1 / step; 
 
+l = calculate_length(frame,raw_image_array,bayer_pattern, scale_factor);
 
-
-
+%3.147209999999999e+03 s = 5
+%3.180312400000000e+03 s = 4
+%3.169429000000000e+03 s = 10
+%3.488189200000000e+03 s = 1
+%3.744033250000000e+03 s = 0.5
 
