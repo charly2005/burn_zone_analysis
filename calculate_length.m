@@ -8,10 +8,10 @@ function l = calculate_length(frame, raw_image_array, bayer_pattern, scale_facto
     binary_image = imfill(binary_image,8);
     binary_image = imfill(binary_image,8,'holes');
     % bw to cc then cc to bw 
-    cc = bwconncomp(binary_image);
+    cc = bwconncomp(~binary_image);
     s = regionprops("table",cc, "Area");
     [~,idx] = sort(s.Area,"descend");
-    filtered_binary_image = cc2bw(cc, ObjectsToKeep=idx(1));
+    filtered_binary_image = ~cc2bw(cc, ObjectsToKeep=idx(1));
 
     % imshow(filtered_binary_image);
     % hold on
