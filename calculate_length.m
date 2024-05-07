@@ -1,4 +1,4 @@
-function l = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
+function [l,filtered_binary_image] = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
 
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
     binary_image = imbinarize(rgb2gray(demosaiced_image), 0.0039);
@@ -66,9 +66,11 @@ function l = calculate_length(frame, raw_image_array, bayer_pattern, scale_facto
     end
     
     mat_cc = bwconncomp(mat);
-    mat_s = regionprops("table",mat_cc, "Area","Perimeter");
+    mat_s = regionprops("table",mat_cc, "Area");
     [~,idx] = sort(mat_s.Area,"descend");
     filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
     imshow(filtered_mat);
-    % disp(mat_s.Perimeter(1));
-    l = mat_s.Perimeter(idx(1)) * 1.7 / scale_factor;
+
+    l = mat_s.Area(idx(1)) * 1.7 / scale_factor;
+
+   
