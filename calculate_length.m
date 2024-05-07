@@ -4,6 +4,7 @@ function [l,filtered_binary_image] = calculate_length(frame, raw_image_array, ba
     binary_image = imbinarize(rgb2gray(demosaiced_image), 0.0039);
     binary_image = imresize(binary_image, scale_factor);
     
+    l = 0;
 
     binary_image = imfill(binary_image,8);
     binary_image = imfill(binary_image,8,'holes');
@@ -65,12 +66,21 @@ function [l,filtered_binary_image] = calculate_length(frame, raw_image_array, ba
         end
     end
     
-    mat_cc = bwconncomp(mat);
-    mat_s = regionprops("table",mat_cc, "Area");
-    [~,idx] = sort(mat_s.Area,"descend");
-    filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
-    imshow(filtered_mat);
+    for r = 1:max_h
+        for c = 1:max_w
+            if mat(r, c) == 1
+                l = l+1;
+            end
+        end
+    end
 
-    l = mat_s.Area(idx(1)) * 1.7 / scale_factor;
+
+    % mat_cc = bwconncomp(mat);
+    % mat_s = regionprops("table",mat_cc, "Perimeter");
+    % [~,idx] = sort(mat_s.Perimeter,"descend");
+    % filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
+    %imshow(filtered_mat);
+
+    % l = mat_s.Perimeter(idx(1));
 
    

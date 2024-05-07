@@ -38,17 +38,31 @@ bayer_pattern = "gbrg";
 clc
 
 
-frame = 41;
+frame = 30;
 
 % smaller step = larger l
-step = 1;
+step = 0.5;
 scale_factor = 1 / step; 
 
-l = calculate_length(frame,raw_image_array,bayer_pattern, scale_factor);
+[l,b] = calculate_length(frame,raw_image_array,bayer_pattern, scale_factor);
 
-%3.147209999999999e+03 s = 5
-%3.180312400000000e+03 s = 4
-%3.169429000000000e+03 s = 10
-%3.488189200000000e+03 s = 1
-%3.744033250000000e+03 s = 0.5
+%% Calculate fractal dimension
 
+% D = logN/logS
+
+scale_factors = [1, 2, 4, 8];
+log_scale_factors = log(scale_factors);
+log_n = [1,2,4,8];
+for f = 20:60
+    for s = 1:4
+        [n,~] = calculate_length(f, raw_image_array, bayer_pattern, scale_factors(s));
+        format bank
+        display(n);
+        log_n(s) = log(n);
+        % plot(log_scale_factors(s), log_n(s), 'bo');
+        % hold on
+    end
+    p = polyfit(log_scale_factors, log_n, 2);
+    plot(f,p(2), 'o');
+    hold on
+end
