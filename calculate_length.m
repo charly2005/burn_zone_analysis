@@ -1,7 +1,7 @@
 function [l,filtered_mat] = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
 
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
-    binary_image = imbinarize(rgb2gray(demosaiced_image), 0.0039);
+    binary_image = imbinarize(rgb2gray(demosaiced_image));
     
     l = 0;
     binary_image = imfill(binary_image,4);
@@ -70,49 +70,56 @@ function [l,filtered_mat] = calculate_length(frame, raw_image_array, bayer_patte
     mat_s = regionprops("table",mat_cc, "Area");
     [~,idx] = sort(mat_s.Area,"descend");
     filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
-    % imshow(filtered_mat);
-    % hold on
-    % convert mat into yx coords
-
-    flame_front = zeros(mat_s.Area(idx(1)),2);
-    % y, x
-    % 1, 1
-    idx = 1;
-    for y = 1:max_h
-        for x = max_w:-1:1
-            if mat(y,x) == 1
-                flame_front(idx,1) = y;
-                flame_front(idx,2) = x;
-                idx = idx+1;
-            end
-        end
-    end
+    %imshow(filtered_mat);
+    %hold on
+    % convert mat into yx coords            
+    % 
+    flame_front = bwtraceboundary(filtered_mat, [1,find(filtered_mat(1,:) ,1,'last')], 'S');
+    % remove duplicate
 
     %segment the flame front into lines
 
     % Stuff for circle that doesn't change 
-    angle = linspace(0,2*pi,100);   % Angle 
+    angle = linspace(0,2*pi,360);   % Angle 
     xv = cos(angle)';               % Unscaled X Coordinates
     yv = sin(angle)';               % Unscaled Y Coordinates
   
     idx = 1;
+    %length = round((max(flame_front(:,1))-min(flame_front(:,1)))/5);
+    %disp(length);
     length = scale_factor;
     pos = flame_front(idx,:);
-    
+    distance = length;
+
     while idx < height(flame_front)
 
         center = flame_front(idx,:);
-        x_circle = xv*length + center(2);
-        y_circle = yv*length + center(1);
-        % plot(x_circle,y_circle,'r');
-        % hold on
-        [in,on] = inpolygon(flame_front(:,2),flame_front(:,1),x_circle,y_circle);
+        x_circle = round(xv*length + center(2));
+        y_circle = round(yv*length + center(1));
+        %plot(x_circle,y_circle,'r');
+        %hold on
         % display(idx);
-        idx = find(in, 1, 'last');
+        [in,on] = inpolygon(flame_front(:,2),flame_front(:,1),x_circle,y_circle);
+        % out of the points in IN, choose point in the direction of largest
+        % IDX
 
+        disp("IGOTHERE")
+        %idx = find(in==1, 1, 'last');
         pos = [pos; flame_front(idx,:)];
-        distance = sqrt((pos(end-1,1) - pos(end,1))^2 + (pos(end-1,2) - pos(end,2))^2);
+        if (size(pos)>1)  
+            distance = sqrt((pos(end-1,1) - pos(end,1))^2 + (pos(end-1,2) - pos(end,2))^2);
+        end
         % distance = pdist([pos(end-1);pos(end)],'euclidean');
-
+        % plot([pos(end-1,2),pos(end,2)],[pos(end-1,1),pos(end,1)],'b','LineWidth',2);
+        % hold on
+        % plot(center(2),center(1),'ro','MarkerSize',4);
+        % hold on
         l = l + distance;
+        
+        disp("IGOTHERE222")
+        disp(idx)
+        disp(flame_front(idx,:))
+        disp(height(flame_front))
     end
+
+    l=l+length;
