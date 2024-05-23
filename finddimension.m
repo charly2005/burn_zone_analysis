@@ -32,50 +32,23 @@ time_s = (0:1:num_images-1)./(setup.FrameRate);
 
 % bayer pattern
 bayer_pattern = "gbrg";
-
-%% a
-
-% inonpolygon to check if a point is in/on a circle
-% if there are >=2 pts that are all below center choose the left most
-% if there are >= 2 pts that are all above center choose right most
-% 
-% edgecase choose inpolygon otherwise use onpolygon
-
+%% tiff file
+t = imwritesize(t, 'f30.tif', 3);
 %% Test
 clc
 
 
-frame = 29;
+frame = 30;
 
-% smaller step = larger l
-step = 0.5;
-scale_factor = 1 / step; 
+[s,n,r,b] = getFractalDimension(frame,raw_image_array,bayer_pattern); 
 
-[l,b] = calculate_length(frame,raw_image_array,bayer_pattern, 64);
-
-%% Calculate fractal dimension
-
-% D = logN/logS
-
-scale_factors = [8, 16,32, 64];
-log_scale_factors = log(scale_factors);
-log_n = [1,2,4,8];
+%% graph
 figure
 xlabel("Frames");
 ylabel("Fractal Dimension");
 hold on
-for f = 41:41
-    for s = 1:4
-        [n,~] = calculate_length(f, raw_image_array, bayer_pattern, scale_factors(s));
-        log_n(s) = log(n);
-        plot(log_scale_factors(s), log_n(s), 'bo');
-        hold on
-    end
-    %display(f);
-    p = polyfit(log_scale_factors, log_n, 1);
-    y = polyval(p,log_scale_factors);
-    plot(log_scale_factors,y,'r');
-    display(1-p(1));
-    % plot(f,p(1), 'go');
-    % hold on
+for f = 20:60
+    [s,~,~,~] = getFractalDimension(f, raw_image_array, bayer_pattern);
+    plot(f,s,'bo');
+    hold on
 end

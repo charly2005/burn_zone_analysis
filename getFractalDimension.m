@@ -1,34 +1,25 @@
-function [s, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_pattern)
+function [s,n,r, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_pattern)
 
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
     gain = 5;
-    %color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
-    %gray_image = rgb2gray(color_image);
-    binary_image = imbinarize(rgb2gray(demosaiced_image));
+    color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
+    gray_image = rgb2gray(color_image);
+    binary_image = imbinarize(gray_image);
+    % imshow(binary_image);
     p = log(max(size(binary_image)))/log(2);
     p = ceil(p);
     binary_image = imresize(binary_image, [2^p, 2^p]);
-
-    % binary_image = imfill(binary_image,4);
-    % binary_image = imfill(binary_image,4,'holes');
-    % imshow(binary_image);
     % bw to cc then cc to bw 
     cc = bwconncomp(~binary_image);
     s = regionprops("table",cc, "Area");
     [~,idx] = sort(s.Area,"descend");
     filtered_binary_image = ~cc2bw(cc, ObjectsToKeep=idx(1));
-
-    % imshow(filtered_binary_image);
-    % hold on
     
     max_h = size(filtered_binary_image, 1);
     max_w = size(filtered_binary_image, 2);
-
-   
     mat = zeros(max_h,max_w);
-    % start at top and move down
 
-    % filtered_binary_image(y,x);
+    % start at top and move down
     for y = 1:max_h
         row = filtered_binary_image(y,:,1);
         last = find(row,1,'last');
@@ -69,30 +60,15 @@ function [s, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_p
             end
         end
     end
-    
-    % 
-    % mat = imgresize(mat, [1024, 1280]);
-    % d = 0;
+   
 
     mat_cc = bwconncomp(mat);
     mat_s = regionprops("table",mat_cc, "Area");
     [~,idx] = sort(mat_s.Area,"descend");
     filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
-    % for x = 1:max_w
-    %     for y = 1:max_h
-    %         if filtered_mat(y,x) ~= 1
-    %             gray_image(y,x) = 255;
-    %         end
-    %     end
-    % end
 
-    figure
-    imshow(filtered_mat);
-    hold on
     % % convert mat into yx coords            
     flame_front = zeros(mat_s.Area(idx(1)),2);
-    % y, x
-    % 1, 1
     idx = 1;
     for y = 1:max_h
         for x = max_w:-1:1
@@ -116,17 +92,16 @@ function [s, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_p
                 end
             end
         end
+        if n(i+1) == 0
+            n(i+1) = 1;
+        end
     end
 
-    disp(n)
-    r = 2^(0:p);
-    disp(r);
-    s=-gradient(log(n))./gradient(log(r)); 
-    figure 
+    r = 2.^(0:p);
+    s=-gradient(log(n))./gradient(log(r));
     semilogx(r, s, 's-');
-    ylim([0 dim]);
     xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
-    title([num2str(dim) 'D box-count']);
-
-    % dont include last value
+    title('box-count');
     s = mean(s(1:width(s)-1));
+
+
