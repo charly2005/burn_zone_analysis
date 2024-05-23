@@ -121,7 +121,6 @@ function [s, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_p
     disp(n)
     r = 2^(0:p);
     disp(r);
-    n = n(n-1:-1,1);
     s=-gradient(log(n))./gradient(log(r)); 
     figure 
     semilogx(r, s, 's-');
