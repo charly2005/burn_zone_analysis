@@ -1,11 +1,16 @@
-function [l,filtered_mat] = calculate_length(frame, raw_image_array, bayer_pattern, scale_factor)
+function [s, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_pattern)
 
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
+    gain = 5;
+    %color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
+    %gray_image = rgb2gray(color_image);
     binary_image = imbinarize(rgb2gray(demosaiced_image));
-    
-    l = 0;
-    binary_image = imfill(binary_image,4);
-    binary_image = imfill(binary_image,4,'holes');
+    p = log(max(size(binary_image)))/log(2);
+    p = ceil(p);
+    binary_image = imresize(binary_image, [2^p, 2^p]);
+
+    % binary_image = imfill(binary_image,4);
+    % binary_image = imfill(binary_image,4,'holes');
     % imshow(binary_image);
     % bw to cc then cc to bw 
     cc = bwconncomp(~binary_image);
@@ -65,61 +70,64 @@ function [l,filtered_mat] = calculate_length(frame, raw_image_array, bayer_patte
         end
     end
     
+    % 
+    % mat = imgresize(mat, [1024, 1280]);
+    % d = 0;
 
     mat_cc = bwconncomp(mat);
     mat_s = regionprops("table",mat_cc, "Area");
     [~,idx] = sort(mat_s.Area,"descend");
     filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
-    %imshow(filtered_mat);
-    %hold on
-    % convert mat into yx coords            
-    % 
-    flame_front = bwtraceboundary(filtered_mat, [1,find(filtered_mat(1,:) ,1,'last')], 'S');
-    % remove duplicate
+    % for x = 1:max_w
+    %     for y = 1:max_h
+    %         if filtered_mat(y,x) ~= 1
+    %             gray_image(y,x) = 255;
+    %         end
+    %     end
+    % end
 
-    %segment the flame front into lines
-
-    % Stuff for circle that doesn't change 
-    angle = linspace(0,2*pi,360);   % Angle 
-    xv = cos(angle)';               % Unscaled X Coordinates
-    yv = sin(angle)';               % Unscaled Y Coordinates
-  
+    figure
+    imshow(filtered_mat);
+    hold on
+    % % convert mat into yx coords            
+    flame_front = zeros(mat_s.Area(idx(1)),2);
+    % y, x
+    % 1, 1
     idx = 1;
-    %length = round((max(flame_front(:,1))-min(flame_front(:,1)))/5);
-    %disp(length);
-    length = scale_factor;
-    pos = flame_front(idx,:);
-    distance = length;
-
-    while idx < height(flame_front)
-
-        center = flame_front(idx,:);
-        x_circle = round(xv*length + center(2));
-        y_circle = round(yv*length + center(1));
-        %plot(x_circle,y_circle,'r');
-        %hold on
-        % display(idx);
-        [in,on] = inpolygon(flame_front(:,2),flame_front(:,1),x_circle,y_circle);
-        % out of the points in IN, choose point in the direction of largest
-        % IDX
-
-        disp("IGOTHERE")
-        %idx = find(in==1, 1, 'last');
-        pos = [pos; flame_front(idx,:)];
-        if (size(pos)>1)  
-            distance = sqrt((pos(end-1,1) - pos(end,1))^2 + (pos(end-1,2) - pos(end,2))^2);
+    for y = 1:max_h
+        for x = max_w:-1:1
+            if mat(y,x) == 1
+                flame_front(idx,1) = y;
+                flame_front(idx,2) = x;
+                idx = idx+1;
+            end
         end
-        % distance = pdist([pos(end-1);pos(end)],'euclidean');
-        % plot([pos(end-1,2),pos(end,2)],[pos(end-1,1),pos(end,1)],'b','LineWidth',2);
-        % hold on
-        % plot(center(2),center(1),'ro','MarkerSize',4);
-        % hold on
-        l = l + distance;
-        
-        disp("IGOTHERE222")
-        disp(idx)
-        disp(flame_front(idx,:))
-        disp(height(flame_front))
+    end
+    % split into boxes of size n x n, up to p x p
+    n = zeros(1, p+1);
+    for i = 0:p
+        for y = 1:2^i:max_h
+            for x = 1:2^i:max_w
+                box_x = [x, x+2^i];
+                box_y = [y, y+2^i];
+                [in,~] = inpolygon(flame_front(:,2),flame_front(:,1),box_x, box_y);
+                if ~isempty(find(in==1,1,'first'))
+                    n(i+1) = n(i+1) + 1;
+                end
+            end
+        end
     end
 
-    l=l+length;
+    disp(n)
+    r = 2^(0:p);
+    disp(r);
+    n = n(n-1:-1,1);
+    s=-gradient(log(n))./gradient(log(r)); 
+    figure 
+    semilogx(r, s, 's-');
+    ylim([0 dim]);
+    xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
+    title([num2str(dim) 'D box-count']);
+
+    % dont include last value
+    s = mean(s(1:width(s)-1));
