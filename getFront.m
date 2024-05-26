@@ -1,4 +1,4 @@
-function [front_x, front_y, back_x, back_y] = calculate_front(frame, img_row, raw_image_array, bayer_pattern)
+function [front_x, front_y, back_x, back_y] = getFront(frame, img_row, raw_image_array, bayer_pattern)
     % front_x is more to the left than back_x
     
     demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);

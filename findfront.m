@@ -38,7 +38,7 @@ bayer_pattern = "gbrg";
 frame = 60;
 img_row = 100;
 
-[x1, y1, x2, y2] = calculate_front(frame, img_row, raw_image_array, bayer_pattern);
+[x1, y1, x2, y2] = getFront(frame, img_row, raw_image_array, bayer_pattern);
 
 demosaiced_image = demosaic(raw_image_array(:,:,frame), "gbrg");
 
@@ -87,7 +87,7 @@ pixels = pixels(:);
 
  
 for f = 20:60
-    [x1, y1, x2, y2] = calculate_front(f, img_row, raw_image_array, bayer_pattern);
+    [x1, y1, x2, y2] = getFront(f, img_row, raw_image_array, bayer_pattern);
     demosaiced_image = demosaic(raw_image_array(:,:,f), "gbrg");
 
     R = double(demosaiced_image(:,:,1));
@@ -143,7 +143,7 @@ for f = 20:60
     num_plots = length(rows);
 
     for i = 1:num_plots
-        [x1, y1, x2, y2] = calculate_front(f, rows(i), raw_image_array, bayer_pattern);
+        [x1, y1, x2, y2] = getFront(f, rows(i), raw_image_array, bayer_pattern);
         
         intensity_line = R(rows(i),:,1);
         smoothed_line = smooth(intensity_line); 

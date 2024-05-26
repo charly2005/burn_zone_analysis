@@ -102,6 +102,9 @@ function [s,n,r, filtered_mat] = getFractalDimension(frame, raw_image_array, bay
     semilogx(r, s, 's-');
     xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
     title('box-count');
+    % alternative
+    % p = polyfit(log(1./r),log(n),1);
+    % s = p(1);
     s = mean(s);
 
 
