@@ -1,94 +1,170 @@
-function [s,n,r, filtered_mat] = getFractalDimension(frame, raw_image_array, bayer_pattern)
-
-    demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
-    gain = 5;
-    color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
-    gray_image = rgb2gray(color_image);
-    binary_image = imbinarize(gray_image);
-    % imshow(binary_image);
-    p = log(max(size(binary_image)))/log(2);
+function [s,n,r,binary_img] = getFractalDimension(frame, raw_image_array, bayer_pattern)
+    gain=5;
+    demosaiced_img = demosaic(raw_image_array(:,:,frame), bayer_pattern);
+    eight_bit_img = uint8(double(demosaiced_img).*(255/4095).*gain);
+    gray_img = rgb2gray(eight_bit_img);
+    % gray_img = gray_img./max(gray_img, [], "all");
+    % gray_img = imgaussfilt(gray_img, 'FilterSize', 3);
+    binary_img = imbinarize(gray_img);
+    % 
+    p = log(max(size(binary_img)))/log(2);
     p = ceil(p);
-    binary_image = imresize(binary_image, [2^p, 2^p]);
-    % bw to cc then cc to bw 
-    cc = bwconncomp(~binary_image);
-    s = regionprops("table",cc, "Area");
-    [~,idx] = sort(s.Area,"descend");
-    filtered_binary_image = ~cc2bw(cc, ObjectsToKeep=idx(1));
+    binary_img = imresize(binary_img, [2^p, 2^p]);
+    imshow(binary_img);
+    % Filling Image to remove hole issue 
+    filled_img = imfill(binary_img, 'holes');
     
-    max_h = size(filtered_binary_image, 1);
-    max_w = size(filtered_binary_image, 2);
-    mat = zeros(max_h,max_w);
-
-    % start at top and move down
-    for y = 1:max_h
-        row = filtered_binary_image(y,:,1);
-        last = find(row,1,'last');
-        first = find(row,1,'first');
-        start = int16((last + first)/2);
-        for x = start:max_w
-            if x < max_w && x > 1
-                if filtered_binary_image(y,x) == 1 && filtered_binary_image(y,x+1) == 0
-                    % change on right
-                    mat(y,x) = 1;
-                elseif filtered_binary_image(y,x) == 1 && filtered_binary_image(y,x-1) == 0
-                    % change on left
-                    mat(y,x) = 1;
-                end
-            elseif x == max_w
-                if filtered_binary_image(y,x) == 1
-                    % edge case
-                    mat(y,x) = 1;
-                end
-            end
-        end
+    stats = regionprops(filled_img, 'Area', 'PixelList', 'PixelIdxList');
+    boundry = stats; 
+    im_height = size(binary_img, 1);
+    im_width = size(binary_img, 2);
+    
+    max_h = im_height;
+    max_w = im_width;
+    % Finding the maximum area
+    [~,idx] = max([boundry.Area]);
+    bw = zeros([im_height, im_width]);
+    
+    % Getting the perimeter of the whole area
+    bw(boundry(idx).PixelIdxList) = 1;
+    B = bwboundaries(bw, 4);
+    perim = B{1};
+    
+    % Finding far right line
+    
+    % Height of the flamefront
+    min_height = min(perim(:,1));
+    max_height = max(perim(:,1));
+    
+    % Upper point
+    temp_perim = perim;
+    rmv = perim(:,1)~=max_height;
+    temp_perim(rmv,:) = [];
+    max_pos = max(temp_perim(:,2));
+    upper_idx = find(perim(:,1)==max_height & perim(:,2)==max_pos);
+    % If you're at the starting point it'll give you a double point
+    if length(upper_idx)>1
+        upper_idx = min(upper_idx);
     end
     
-    for x = 1:max_w
-        col = filtered_binary_image(:,x,1);
-        last = find(col,1,'last');
-        first = find(col,1,'first');
-        start = int16((last + first)/2);
-        for y = start:max_h
-            if y < max_h && y >= 1
-                if filtered_binary_image(y,x) == 1 && filtered_binary_image(y+1,x) == 0
-                    % change on up
-                    mat(y,x) = 1;
-                elseif filtered_binary_image(y,x) == 1 && filtered_binary_image(y-1,x) == 0
-                    % change on down
-                    mat(y,x) = 1;
-                end
-            end
-        end
+    % Lower point
+    temp_perim = perim;
+    rmv = perim(:,1)~=min_height;
+    temp_perim(rmv,:) = [];
+    min_pos = max(temp_perim(:,2));
+    lower_idx = find(perim(:,1)==min_height & perim(:,2)==min_pos);
+    % If you're at the starting point it'll give you a double point
+    if length(lower_idx)>1
+        lower_idx = min(lower_idx);
     end
-   
-
-    mat_cc = bwconncomp(mat);
-    mat_s = regionprops("table",mat_cc, "Area");
-    [~,idx] = sort(mat_s.Area,"descend");
-    filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
-
-    % % convert mat into yx coords            
-    flame_front = zeros(mat_s.Area(idx(1)),2);
-    idx = 1;
-    for y = 1:max_h
-        for x = max_w:-1:1
-            if mat(y,x) == 1
-                flame_front(idx,1) = y;
-                flame_front(idx,2) = x;
-                idx = idx+1;
-            end
-        end
+    
+    % Doing this since I'm not sure how the perimeter is drawn. Not
+    % sure if it starts from one point in particluar every time. Easier
+    % to make sure.
+    if upper_idx > lower_idx
+        perim = perim(lower_idx:upper_idx,:);
+        singleFlameFront = perim;
+    elseif lower_idx > upper_idx
+        perim = perim(upper_idx:lower_idx,:);
+        singleFlameFront = perim;
     end
-    % split into boxes of size n x n, up to p x p
+    
+    flame_front = unique(singleFlameFront, 'rows', 'stable');
+    % demosaiced_image = demosaic(raw_image_array(:,:,frame), bayer_pattern);
+    % gain = 5;
+    % color_image = uint8(double(demosaiced_image)*(255/4095)*gain);
+    % 
+    % % color_image = imread('awdok.png');
+    % gray_image = rgb2gray(color_image);
+    % binary_image = imbinarize(gray_image);
+    % imshow(binary_image);
+    % p = log(max(size(binary_image)))/log(2);
+    % p = ceil(p);
+    % binary_image = imresize(binary_image, [2^p, 2^p]);
+    % % bw to cc then cc to bw 
+    % cc = bwconncomp(~binary_image);
+    % s = regionprops("table",cc, "Area");
+    % [~,idx] = sort(s.Area,"descend");
+    % filtered_binary_image = ~cc2bw(cc, ObjectsToKeep=idx(1));
+    % imshow(filtered_binary_image);
+    % 
+    % max_h = size(filtered_binary_image, 1);
+    % max_w = size(filtered_binary_image, 2);
+    % mat = zeros(max_h,max_w);
+    % 
+    % % start at top and move down
+    % for y = 1:max_h
+    %     row = filtered_binary_image(y,:,1);
+    %     last = find(row,1,'last');
+    %     first = find(row,1,'first');
+    %     start = int16((last + first)/2);
+    %     for x = start:max_w
+    %         if x < max_w && x > 1
+    %             if filtered_binary_image(y,x) == 1 && filtered_binary_image(y,x+1) == 0
+    %                 % change on right
+    %                 mat(y,x) = 1;
+    %             elseif filtered_binary_image(y,x) == 1 && filtered_binary_image(y,x-1) == 0
+    %                 % change on left
+    %                 mat(y,x) = 1;
+    %             end
+    %         % elseif x == max_w
+    %         %     if filtered_binary_image(y,x) == 1
+    %         %         % edge case
+    %         %         mat(y,x) = 1;
+    %         %     end
+    %         end
+    %     end
+    % end
+    % 
+    % for x = 1:max_w
+    %     col = filtered_binary_image(:,x,1);
+    %     last = find(col,1,'last');
+    %     first = find(col,1,'first');
+    %     start = int16((last + first)/2);
+    %     for y = start:max_h
+    %         if y < max_h && y >= 1
+    %             if filtered_binary_image(y,x) == 1 && filtered_binary_image(y+1,x) == 0
+    %                 % change on up
+    %                 mat(y,x) = 1;
+    %             elseif filtered_binary_image(y,x) == 1 && filtered_binary_image(y-1,x) == 0
+    %                 % change on down
+    %                 mat(y,x) = 1;
+    %             end
+    %         end
+    %     end
+    % end
+    % 
+    % 
+    % mat_cc = bwconncomp(mat);
+    % mat_s = regionprops("table",mat_cc, "Area");
+    % [~,idx] = sort(mat_s.Area,"descend");
+    % filtered_mat = cc2bw(mat_cc, ObjectsToKeep=idx(1));
+    % imshow(filtered_mat);
+    % hold on
+    % 
+    % % % convert mat into yx coords            
+    % flame_front = zeros(mat_s.Area(idx(1)),2);
+    % idx = 1;
+    % for y = 1:max_h
+    %     for x = max_w:-1:1
+    %         if mat(y,x) == 1
+    %             flame_front(idx,1) = y;
+    %             flame_front(idx,2) = x;
+    %             idx = idx+1;
+    %         end
+    %     end
+    % end
+    % split into boxes of size n x n, up to 2^p x 2^p
+
     n = zeros(1, p+1);
     for i = 0:p
-        for y = 1:2^i:max_h
-            for x = 1:2^i:max_w
+        for y = 1:2^i:max_h-2^i
+            for x = 1:2^i:max_w-2^i
                 box_x = [x, x+2^i];
                 box_y = [y, y+2^i];
                 [in,~] = inpolygon(flame_front(:,2),flame_front(:,1),box_x, box_y);
                 if ~isempty(find(in==1,1,'first'))
-                    n(i+1) = n(i+1) + 1;
+                   n(i+1) = n(i+1) + 1;
                 end
             end
         end
@@ -98,13 +174,33 @@ function [s,n,r, filtered_mat] = getFractalDimension(frame, raw_image_array, bay
     end
 
     r = 2.^(0:p);
-    s=-gradient(log(n))./gradient(log(r));
-    semilogx(r, s, 's-');
-    xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
-    title('box-count');
-    % alternative
-    % p = polyfit(log(1./r),log(n),1);
-    % s = p(1);
-    s = mean(s);
+    % s=-gradient(log(n))./gradient(log(r));
+    % figure
+    % semilogx(r, s, 's-');
+    % xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
+    % title('box dimension');
+    % s = mean(s);
 
+    % file:///C:/Users/charl/Downloads/An_effective_method_to_compute_the_box-counting_di.pdf
+    % alternate method for n different values of r
+    % exact same as linear regression w/ polyfit(x,y,1)
+    nsumxy = 0;
+    nsumx2 = 0;
+    sumx = 0;
+    sumy = 0;
+
+    y = log(n);
+    x = log(1./r);
+    
+    for i = 1:width(n)
+        nsumxy = nsumxy + (y(i) * x(i));
+        sumx = sumx + x(i);
+        sumy = sumy + y(i);
+        nsumx2 = nsumx2 + x(i)^2;
+    end
+    nsumxy = nsumxy * width(n);
+    nsumx2 = nsumx2 * width(n);
+    s = (nsumxy - sumx*sumy)/(nsumx2 - sumx^2);
+    
+        
 
