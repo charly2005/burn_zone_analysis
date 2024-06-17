@@ -10,24 +10,31 @@ function [s,n,r,binary_img] = getFractalDimension(frame, raw_image_array, bayer_
     p = log(max(size(binary_img)))/log(2);
     p = ceil(p);
     binary_img = imresize(binary_img, [2^p, 2^p]);
-    imshow(binary_img);
     % Filling Image to remove hole issue 
-    filled_img = imfill(binary_img, 'holes');
-    
-    stats = regionprops(filled_img, 'Area', 'PixelList', 'PixelIdxList');
-    boundry = stats; 
+    % filled_img = imfill(binary_img, 'holes');
+    % 
+    % stats = regionprops(filled_img, 'Area', 'PixelList', 'PixelIdxList');
+    % boundry = stats; 
     im_height = size(binary_img, 1);
     im_width = size(binary_img, 2);
-    
+
     max_h = im_height;
     max_w = im_width;
-    % Finding the maximum area
-    [~,idx] = max([boundry.Area]);
-    bw = zeros([im_height, im_width]);
-    
+    % % Finding the maximum area
+    % [~,idx] = max([boundry.Area]);
+    % bw = zeros([im_height, im_width]);
+
+    % bw to cc then cc to bw 
+    cc = bwconncomp(~binary_img);
+    s = regionprops("table",cc, "Area");
+    [~,idx] = sort(s.Area,"descend");
+    filtered_binary_image = ~cc2bw(cc, ObjectsToKeep=idx(1));
+    figure;
+    imshow(filtered_binary_image);
+    hold on
     % Getting the perimeter of the whole area
-    bw(boundry(idx).PixelIdxList) = 1;
-    B = bwboundaries(bw, 4);
+    % bw(boundry(idx).PixelIdxList) = 1;
+    B = bwboundaries(filtered_binary_image, 4);
     perim = B{1};
     
     % Finding far right line
@@ -154,6 +161,7 @@ function [s,n,r,binary_img] = getFractalDimension(frame, raw_image_array, bayer_
     %         end
     %     end
     % end
+
     % split into boxes of size n x n, up to 2^p x 2^p
 
     n = zeros(1, p+1);
@@ -174,11 +182,11 @@ function [s,n,r,binary_img] = getFractalDimension(frame, raw_image_array, bayer_
     end
 
     r = 2.^(0:p);
-    % s=-gradient(log(n))./gradient(log(r));
-    % figure
-    % semilogx(r, s, 's-');
-    % xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
-    % title('box dimension');
+    s=-gradient(log(n))./gradient(log(r));
+    figure
+    semilogx(r, s, 's-');
+    xlabel('r, box size'); ylabel('- d ln n / d ln r, local dimension');
+    title('box dimension');
     % s = mean(s);
 
     % file:///C:/Users/charl/Downloads/An_effective_method_to_compute_the_box-counting_di.pdf
@@ -189,6 +197,9 @@ function [s,n,r,binary_img] = getFractalDimension(frame, raw_image_array, bayer_
     sumx = 0;
     sumy = 0;
 
+    figure
+    plot(log(1./r),log(n),'o');
+    hold on
     y = log(n);
     x = log(1./r);
     
