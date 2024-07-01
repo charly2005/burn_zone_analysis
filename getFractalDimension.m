@@ -64,17 +64,17 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     for i = 1:height(flame_front)
         b(flame_front(i,1), flame_front(i,2)) = 1;
     end
-    figure
-    imshow(b);
-    hold on
-    
+    % figure
+    % imshow(b);
+    % hold on
+    % 
     n = zeros(1, p+1);
     for i = 0:p
-        for y = 1:2^i:max_h-2^i
-            for x = 1:2^i:max_w-2^i
+        for y = 1:2^i:max_h-2^i + 1
+            for x = 1:2^i:max_w-2^i + 1
                 box_x = [x, x+2^i];
                 box_y = [y, y+2^i];
-                %
+                % hard coded inpolygon
                 % in = [];
                 % for j = 1:height(flame_front)
                 %     if (flame_front(j,1) < box_y(2) && flame_front(j,1) > box_y(1) ...
@@ -86,8 +86,9 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
                 [in,~] = inpolygon(flame_front(:,2),flame_front(:,1),box_x, box_y);
                 if ~isempty(find(in==1,1,'first'))
                    n(i+1) = n(i+1) + 1;
-                   if (i == 10) 
-                       disp(n(i+1));
+                   if (i == 61111) 
+                        disp(box_x(1));
+                        disp(box_y(1));
                     rectangle('Position',[box_x(1), box_y(1), 2^i, 2^i] ...
                         ,'Edgecolor','g');
                     hold on
@@ -101,9 +102,6 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
                 %     end
                 % end
             end
-        end
-        if n(i+1) < 1
-            n(i+1) = 1;
         end
     end
 
@@ -122,12 +120,12 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     nsumx2 = 0;
     sumx = 0;
     sumy = 0;
-
-    figure
-    t = "Frame " + frame;
-    title(t);
-    plot(log(1./r),log(n),'o');
-    hold on
+    % 
+    % figure
+    % t = "Frame " + frame;
+    % title(t);
+    % plot(log(1./r),log(n),'o');
+    % hold on
     y = log(n);
     x = log(1./r);
     
