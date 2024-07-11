@@ -2,8 +2,8 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     gain=5;
     demosaiced_img = demosaic(raw_image_array(:,:,frame), bayer_pattern);
     eight_bit_img = uint8(double(demosaiced_img).*(255/4095).*gain);
-    % figure;
-    % imshow(eight_bit_img);
+    figure;
+    imshow(eight_bit_img);
     gray_img = rgb2gray(eight_bit_img);
     binary_img = imbinarize(gray_img); 
     p = log(max(size(binary_img)))/log(2);
@@ -64,14 +64,14 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     for i = 1:height(flame_front)
         b(flame_front(i,1), flame_front(i,2)) = 1;
     end
-    % figure
-    % imshow(b);
-    % hold on
+    figure
+    imshow(b);
+    hold on
     % 
     n = zeros(1, p+1);
     for i = 0:p
-        for y = 1:2^i:max_h-2^i + 1
-            for x = 1:2^i:max_w-2^i + 1
+        for y = 1:2^i:max_h-2^i
+            for x = 1:2^i:max_w-2^i
                 box_x = [x, x+2^i];
                 box_y = [y, y+2^i];
                 % hard coded inpolygon
@@ -86,22 +86,11 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
                 [in,~] = inpolygon(flame_front(:,2),flame_front(:,1),box_x, box_y);
                 if ~isempty(find(in==1,1,'first'))
                    n(i+1) = n(i+1) + 1;
-                   if (i == 61111) 
-                        disp(box_x(1));
-                        disp(box_y(1));
-                    rectangle('Position',[box_x(1), box_y(1), 2^i, 2^i] ...
-                        ,'Edgecolor','g');
-                    hold on
-                   end
                 end
-                % else
-                %     if (i == 7)
-                %         rectangle('Position',[box_x(1), box_y(2), 2^i, 2^i] ...
-                %         ,'Edgecolor','r');
-                %     hold on
-                %     end
-                % end
             end
+        end
+        if n(i+1) == 0
+            n(i+1) = 1;
         end
     end
 
@@ -113,19 +102,18 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     %title('box dimension');
     % s = mean(s);
 
-    % file:///C:/Users/charl/Downloads/An_effective_method_to_compute_the_box-counting_di.pdf
     % alternate method for n different values of r
     % exact same as linear regression w/ polyfit(x,y,1)
     nsumxy = 0;
     nsumx2 = 0;
     sumx = 0;
     sumy = 0;
-    % 
-    % figure
-    % t = "Frame " + frame;
-    % title(t);
-    % plot(log(1./r),log(n),'o');
-    % hold on
+
+    figure
+    t = "Frame " + frame;
+    title(t);
+    plot(log(1./r),log(n),'o');
+    hold on
     y = log(n);
     x = log(1./r);
     
