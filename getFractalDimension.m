@@ -2,8 +2,8 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     gain=5;
     demosaiced_img = demosaic(raw_image_array(:,:,frame), bayer_pattern);
     eight_bit_img = uint8(double(demosaiced_img).*(255/4095).*gain);
-    figure;
-    imshow(eight_bit_img);
+    % figure;
+    % imshow(eight_bit_img);
     gray_img = rgb2gray(eight_bit_img);
     binary_img = imbinarize(gray_img); 
     p = log(max(size(binary_img)))/log(2);
@@ -64,14 +64,14 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     for i = 1:height(flame_front)
         b(flame_front(i,1), flame_front(i,2)) = 1;
     end
-    figure
-    imshow(b);
-    hold on
-    % 
+    % figure
+    % imshow(b);
+    % hold on
+
     n = zeros(1, p+1);
     for i = 0:p
-        for y = 1:2^i:max_h-2^i
-            for x = 1:2^i:max_w-2^i
+        for y = 1:2^i:max_h-2^i + 1
+            for x = 1:2^i:max_w-2^i + 1
                 box_x = [x, x+2^i];
                 box_y = [y, y+2^i];
                 % hard coded inpolygon
@@ -109,15 +109,20 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     sumx = 0;
     sumy = 0;
 
-    figure
-    t = "Frame " + frame;
-    title(t);
-    plot(log(1./r),log(n),'o');
-    hold on
+    % exclude first 2
+    r = r(3:end);
+    n = n(3:end);
+
+    % figure
+    % plot(log(1./r),log(n),'o');
+    % hold on
+    % t = "Frame " + frame;
+    % title(t);
+    % hold on
     y = log(n);
     x = log(1./r);
-    
-    for i = 1:width(n)
+
+    for i = 1:width(y)
         nsumxy = nsumxy + (y(i) * x(i));
         sumx = sumx + x(i);
         sumy = sumy + y(i);
@@ -126,6 +131,5 @@ function [s,n,r,b] = getFractalDimension(frame, raw_image_array, bayer_pattern)
     nsumxy = nsumxy * width(n);
     nsumx2 = nsumx2 * width(n);
     s = (nsumxy - sumx*sumy)/(nsumx2 - sumx^2);
-    
         
 
